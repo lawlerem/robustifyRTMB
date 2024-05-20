@@ -30,38 +30,43 @@ robust_weight<- function(x, robustness, robust_function = "id") NULL
 logdet<- function(m) NULL
 
 .onLoad<- function(libname, pkgname) {
-  .atomic_log_logistic<- RTMB::MakeTape(
+  .orig_TapeConfig<- RTMB::TapeConfig()
+  RTMB::TapeConfig(comparison = "tape")
+
+  .ll<- RTMB::MakeTape(
     function(y) {
       x<- y[[1]]
-      c<- y[[2]]
+      c<- 1 / (y[[2]] + 0.002) # give upper bound to c to avoid overflow later
       ans<- log(1 + exp(x + c)) - log(1 + exp(c))
+      ans<- (y[[2]] == 0) * x + (y[[2]] > 0) * ans
       return(ans)
     },
     c(0, 1)
   )$atomic()
+  .ll_jac<- .ll$jacfun()
 
-  .orig_TapeConfig<- RTMB::TapeConfig()
-  RTMB::TapeConfig(comparison = "tape")
-  .atomic_smooth_semi_huber<- RTMB::MakeTape(
+  .ssh<- RTMB::MakeTape(
     function(y) {
       x<- y[[1]]
-      c<- y[[2]]
+      c<- 1 / (y[[2]] + .Machine$double.eps)
       u<- (x + c) / c
       ans<- (x >= -c) * (x) + 
         (x < -c) * (c * log(u + sqrt(1 + u^2)) - c)
+      ans<- (y[[2]] == 0) * x + (y[[2]] > 0) * ans
       return(ans)
     },
     c(0, 1)
   )$atomic()
+  .ssh_jac<- .ssh$jacfun()
+
   do.call(RTMB::TapeConfig, as.list(.orig_TapeConfig))
 
   robustify<- function(x, robustness, robust_function = "id") {
-    c<- 1 / robustness
     ans<- switch(
       robust_function,
       "id" = x,
-      "ll" = .atomic_log_logistic(c(x, c)),
-      "ssh" = .atomic_smooth_semi_huber(c(x, c)),
+      "ll" = .ll(c(x, robustness)),
+      "ssh" = .ssh(c(x, robustness)),
       default = x
     )
     return(ans)
@@ -73,12 +78,11 @@ logdet<- function(m) NULL
   )
 
   robust_weight<- function(x, robustness, robust_function = "id") {
-    c<- 1 / robustness
     ans<- switch(
       robust_function,
       "id" = 1,
-      "ll" = .atomic_log_logistic$jacfun()(c(x, c))[1],
-      "ssh" = .atomic_smooth_semi_huber$jacfun()(c(x, c))[1],
+      "ll" = .ll_jac(c(x, robustness))[1],
+      "ssh" = .ssh_jac(c(x, robustness))[1],
       default = 1
     )
     return(ans)
