@@ -20,15 +20,6 @@ robustify<- function(x, robustness, robust_function = "id") NULL
 #' @export
 robust_weight<- function(x, robustness, robust_function = "id") NULL
 
-#' Compute the log-determinant of a matrix
-#' 
-#' @param m A square matrix
-#' 
-#' @return The log-determinant of m
-#' 
-#' @export
-logdet<- function(m) NULL
-
 .onLoad<- function(libname, pkgname) {
   .orig_TapeConfig<- RTMB::TapeConfig()
   RTMB::TapeConfig(comparison = "tape")
@@ -90,23 +81,6 @@ logdet<- function(m) NULL
   assign(
     "robust_weight",
     robust_weight,
-    parent.env(environment())
-  )
-
-  logdet<- RTMB::ADjoint(
-    function(x) {
-        dim(x) <- rep(sqrt(length(x)), 2)
-        determinant(x, log=TRUE)$modulus
-    },
-    function(x, y, dy) {
-        dim(x) <- rep(sqrt(length(x)), 2)
-        t(RTMB::solve(x)) * dy
-    },
-    name = "logdet"
-  )
-  assign(
-    "logdet",
-    logdet,
     parent.env(environment())
   )
 
