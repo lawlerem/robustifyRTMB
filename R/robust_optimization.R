@@ -149,14 +149,12 @@ robustly_optimize<- function(
         )
     } else {}
     
-    if( get_sdr ) {
-        if( outer.trace ) cat("Computing sdreport.\n")
-        sdr<- sdreport(
-            obj,
-            opt$par,
-            getJointPrecision = TRUE
-        )
-    } else  {}
+    if( outer.trace ) cat("Computing sdreport.\n")
+    sdr<- sdreport(
+        obj,
+        opt$par,
+        getJointPrecision = TRUE
+    )
     
     return(
         list(
