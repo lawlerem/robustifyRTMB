@@ -140,7 +140,7 @@ robustly_optimize<- function(
 
     if( outer.trace ) cat("Re-creating ADFun. ")
     if( length(robust_schedule) > 1 ) {
-        obj<- MakeADFun(
+        obj<- RTMB::MakeADFun(
             func,
             fitpar,
             map = c(map, robust_map),
@@ -150,7 +150,7 @@ robustly_optimize<- function(
     } else {}
     
     if( outer.trace ) cat("Computing sdreport.\n")
-    sdr<- sdreport(
+    sdr<- RTMB::sdreport(
         obj,
         opt$par,
         getJointPrecision = TRUE
