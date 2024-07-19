@@ -76,6 +76,19 @@ robustly_optimize<- function(
         spline_map
     )
 
+    parameter_tracing<- lapply(
+        robust_schedule,
+        function(r) {
+            return(
+                list(
+                    robustness = r,
+                    parameters = parameters,
+                    opt = NA
+                )
+            )
+        }
+    )
+
     if( outer.trace & length(robust_schedule) > 0) cat("Creating taped function.\n")
     if( length(robust_schedule) == 1) {
         f<- func
@@ -99,7 +112,10 @@ robustly_optimize<- function(
         obj$gr
     )
     fitpar<- obj$env$parList()
-    for( r in robust_schedule[-1] ) {
+    parameter_tracing[[1]]$parameters<- fitpar
+    parameter_tracing[[1]]$opt<- opt
+    for( i in seq_along(robust_schedule)[-1] ) {
+        r<- robust_schedule[i]
         fitpar$robustness<- r
         # 1.) Tighten spline estimate to remove pull from outliers
         if( outer.trace ) cat(paste0("(", fitpar$robustness, ") Tightening random effects. "))
@@ -136,7 +152,36 @@ robustly_optimize<- function(
             obj$gr
         )
         fitpar<- obj$env$parList()
+
+        parameter_tracing[[i]]$parameters<- fitpar
+        parameter_tracing[[i]]$opt<- opt
     }
+
+    convergences<- do.call(
+        c,
+        lapply(
+            parameter_tracing,
+            function(x) {
+                return(x$opt$convergence)
+            }
+        )
+    )
+    if( any(convergences == 0) ) {
+        last_converged<- max(which(convergences == 0))
+    } else {
+        last_converged<- length(convergences)
+    }
+    if( outer.trace & (last_converged != length(convergences)) ) {
+        cat(
+            paste0(
+                "Target robustness did not successfully converge. Using robustness ",
+                parameter_tracing[[last_converged]]$robustness,
+                " instead.\n"
+            )
+        )
+    } else {}
+    fitpar<- parameter_tracing[[last_converged]]$parameters
+    opt<- parameter_tracing[[last_converged]]$opt
 
     if( outer.trace ) cat("Re-creating ADFun. ")
     if( length(robust_schedule) > 1 ) {
