@@ -75,6 +75,15 @@ robustly_optimize<- function(
         map[names(map) != smooth],
         spline_map
     )
+    par_map<- lapply(
+        parameters,
+        function(x) {
+            x[]<- NA
+            x<- as.factor(x)
+            return(x)
+        }
+    )
+    par_map<- par_map[!(names(par_map) %in% c(smooth, "robustness"))]
 
     parameter_tracing<- lapply(
         robust_schedule,
@@ -114,9 +123,26 @@ robustly_optimize<- function(
     fitpar<- obj$env$parList()
     parameter_tracing[[1]]$parameters<- fitpar
     parameter_tracing[[1]]$opt<- opt
-    for( i in seq_along(robust_schedule)[-1] ) {
+    for( i in seq_along(robust_schedule) ) {
         r<- robust_schedule[i]
         fitpar$robustness<- r
+
+        # 3.) Re-estimate both together
+        if( outer.trace ) cat(paste0("Re-estimating all.\n"))
+        obj<- RTMB::MakeADFun(
+            f,
+            fitpar,
+            map = c(map, robust_map),
+            random = random,
+            silent = !inner.trace
+        )
+        opt<- nlminb(
+            obj$par,
+            obj$fn,
+            obj$gr
+        )
+        fitpar<- obj$env$parList()
+        
         # 1.) Tighten spline estimate to remove pull from outliers
         if( outer.trace ) cat(paste0("(", fitpar$robustness, ") Tightening random effects. "))
         fitpar[[smooth]]<- tighten(fitpar[[smooth]])
@@ -137,20 +163,16 @@ robustly_optimize<- function(
         )
         fitpar<- obj$env$parList()
 
-        # 3.) Re-estimate spline and parameters
-        if( outer.trace ) cat(paste0("Re-estimating all parameters.\n"))
+        # 3.) Re-estimate spline holding parameters fixed
+        if( outer.trace ) cat(paste0("Re-estimating spline.\n"))
         obj<- RTMB::MakeADFun(
             f,
             fitpar,
-            map = c(map, robust_map),
+            map = c(par_map, robust_map),
             random = random,
             silent = !inner.trace
         )
-        opt<- nlminb(
-            obj$par,
-            obj$fn,
-            obj$gr
-        )
+        obj$fn()
         fitpar<- obj$env$parList()
 
         parameter_tracing[[i]]$parameters<- fitpar
@@ -197,7 +219,7 @@ robustly_optimize<- function(
     if( outer.trace ) cat("Computing sdreport.\n")
     sdr<- RTMB::sdreport(
         obj,
-        opt$par,
+        # opt$par,
         getJointPrecision = TRUE
     )
     
