@@ -102,10 +102,11 @@ robustly_optimize<- function(
     if( length(robust_schedule) == 1) {
         f<- func
     } else {
-        f<- RTMB::MakeTape(
-            func,
-            parameters
-        )
+        f<- func
+        # f<- RTMB::MakeTape(
+        #     func,
+        #     parameters
+        # )
     }
     if( outer.trace ) cat(paste0("(", parameters$robustness, ") Starting optimization.\n"))
     obj<- RTMB::MakeADFun(
@@ -126,26 +127,28 @@ robustly_optimize<- function(
     for( i in seq_along(robust_schedule) ) {
         r<- robust_schedule[i]
         fitpar$robustness<- r
-
-        # 3.) Re-estimate both together
-        if( outer.trace ) cat(paste0("Re-estimating all.\n"))
-        obj<- RTMB::MakeADFun(
-            f,
-            fitpar,
-            map = c(map, robust_map),
-            random = random,
-            silent = !inner.trace
-        )
-        opt<- nlminb(
-            obj$par,
-            obj$fn,
-            obj$gr
-        )
-        fitpar<- obj$env$parList()
         
         # 1.) Tighten spline estimate to remove pull from outliers
         if( outer.trace ) cat(paste0("(", fitpar$robustness, ") Tightening random effects. "))
         fitpar[[smooth]]<- tighten(fitpar[[smooth]])
+
+        # 1a.) Get new estimate of variance using closest 75% of data in each class
+        obj<- RTMB::MakeADFun(
+            f,
+            fitpar,
+            map = c(spline_map, robust_map),
+            random = random,
+            silent = !inner.trace
+        )
+        report<- obj$report()
+        residuals<- report$ping_pred - environment(func)$coordinates
+        by(
+            residuals[, 1],
+            environment(func)$class,
+            function(x) {
+                return(median(abs(x)))
+            }
+        )
 
         # 2.) Re-estimate parameters holding spline fixed
         if( outer.trace ) cat(paste0("Re-estimating fixed parameters. "))
@@ -174,6 +177,22 @@ robustly_optimize<- function(
         )
         obj$fn()
         fitpar<- obj$env$parList()
+
+        # 3.) Re-estimate both together
+        # if( outer.trace ) cat(paste0("Re-estimating all.\n"))
+        # obj<- RTMB::MakeADFun(
+        #     f,
+        #     fitpar,
+        #     map = c(map, robust_map),
+        #     random = random,
+        #     silent = !inner.trace
+        # )
+        # opt<- nlminb(
+        #     obj$par,
+        #     obj$fn,
+        #     obj$gr
+        # )
+        # fitpar<- obj$env$parList()
 
         parameter_tracing[[i]]$parameters<- fitpar
         parameter_tracing[[i]]$opt<- opt
