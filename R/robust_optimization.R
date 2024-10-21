@@ -30,7 +30,7 @@ robustly_optimize<- function(
         function(d, bandwidth) exp( -(d / bandwidth) ),
         "d"
     )
-    d<- dist(
+    d<- stats::dist(
         nodes,
         diag = TRUE,
         upper = TRUE
@@ -57,7 +57,7 @@ robustly_optimize<- function(
             robustness = robust_schedule[[1]]
         )
     )
-    parameters<- as.relistable(parameters)
+    parameters<- utils::as.relistable(parameters)
     if( "robustness" %in% names(map) ) map$robustness<- NULL
     robust_map<- list(
         robustness = as.factor(NA)
@@ -106,7 +106,7 @@ robustly_optimize<- function(
         random = random,
         silent = !inner.trace
     )
-    opt<- nlminb(
+    opt<- stats::nlminb(
         obj$par,
         obj$fn,
         obj$gr
@@ -130,7 +130,7 @@ robustly_optimize<- function(
             random = random,
             silent = !inner.trace
         )
-        opt<- nlminb(
+        opt<- stats::nlminb(
             obj$par,
             obj$fn,
             obj$gr
@@ -146,7 +146,7 @@ robustly_optimize<- function(
             random = random,
             silent = !inner.trace
         )
-        opt<- nlminb(
+        opt<- stats::nlminb(
             obj$par,
             obj$fn,
             obj$gr
