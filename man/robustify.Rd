@@ -10,22 +10,22 @@ robustify(x, robustness, robust_function = "id")
 robust_weight(x, robustness, robust_function = "id")
 }
 \arguments{
-\item{x}{A likelihood value}
+\item{x}{A vector of log-likelihood values}
 
 \item{robustness}{A positive number. Larger numbers downweight components more.}
 
 \item{robust_function}{Either "id" for the identity (non-robust), "ll" for log-logistic, or "ssh" for smooth semi-huber.}
 }
 \value{
-A numeric value giving the robustified likelihood component.
+The robustified log-likelihood values.
 
-A numeric value giving the robust weight.
+A vector of robust weights.
 }
 \description{
 Compute the robustified likelihood value
 }
 \section{Functions}{
 \itemize{
-\item \code{robust_weight()}: Compute the robust weight of a likelihood component
+\item \code{robust_weight()}: Compute the robust weight of log-likelihood values
 
 }}
