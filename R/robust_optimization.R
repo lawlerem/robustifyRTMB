@@ -23,8 +23,7 @@ robustly_optimize<- function(
         robust_schedule = 0,
         map = list(),
         bandwidth = 1e-6,
-        inner.trace = FALSE,
-        outer.trace = TRUE
+        silent = TRUE
     ) {
     weight_fun<- Vectorize(
         function(d, bandwidth) exp( -(d / bandwidth) ),
@@ -89,7 +88,7 @@ robustly_optimize<- function(
         }
     )
 
-    if( outer.trace & length(robust_schedule) > 0) cat("Creating taped function.\n")
+    if( !silent & length(robust_schedule) > 0) cat("Creating taped function.\n")
     if( length(robust_schedule) == 1) {
         f<- func
     } else {
@@ -98,13 +97,13 @@ robustly_optimize<- function(
             parameters
         )
     }
-    if( outer.trace ) cat(paste0("(", parameters$robustness, ") Starting optimization.\n"))
+    if( !silent ) cat(paste0("(", parameters$robustness, ") Starting optimization.\n"))
     obj<- RTMB::MakeADFun(
         f,
         parameters,
         map = c(map, robust_map),
         random = random,
-        silent = !inner.trace
+        silent = TRUE
     )
     opt<- stats::nlminb(
         obj$par,
@@ -118,17 +117,17 @@ robustly_optimize<- function(
         r<- robust_schedule[i]
         fitpar$robustness<- r
         # 1.) Tighten spline estimate to remove pull from outliers
-        if( outer.trace ) cat(paste0("(", fitpar$robustness, ") Tightening random effects. "))
+        if( !silent ) cat(paste0("\r\033[K(", fitpar$robustness, ") Tightening random effects. "))
         fitpar[[smooth]]<- tighten(fitpar[[smooth]])
 
         # 2.) Re-estimate parameters holding spline fixed
-        if( outer.trace ) cat(paste0("Re-estimating fixed parameters. "))
+        if( !silent ) cat(paste0("Re-estimating fixed parameters. "))
         obj<- RTMB::MakeADFun(
             f,
             fitpar,
             map = c(spline_map, robust_map),
             random = random,
-            silent = !inner.trace
+            silent = TRUE
         )
         opt<- stats::nlminb(
             obj$par,
@@ -138,13 +137,14 @@ robustly_optimize<- function(
         fitpar<- obj$env$parList()
 
         # 3.) Re-estimate spline and parameters
-        if( outer.trace ) cat(paste0("Re-estimating all parameters.\n"))
+        if( !silent ) cat(paste0("Re-estimating all parameters."))
+        if( !silent & (i == length(robust_schedule)) ) cat("\n")
         obj<- RTMB::MakeADFun(
             f,
             fitpar,
             map = c(map, robust_map),
             random = random,
-            silent = !inner.trace
+            silent = TRUE
         )
         opt<- stats::nlminb(
             obj$par,
@@ -171,7 +171,7 @@ robustly_optimize<- function(
     } else {
         last_converged<- length(convergences)
     }
-    if( outer.trace & (last_converged != length(convergences)) ) {
+    if( !silent & (last_converged != length(convergences)) ) {
         cat(
             paste0(
                 "Target robustness did not successfully converge. Using robustness ",
@@ -183,18 +183,18 @@ robustly_optimize<- function(
     fitpar<- parameter_tracing[[last_converged]]$parameters
     opt<- parameter_tracing[[last_converged]]$opt
 
-    if( outer.trace ) cat("Re-creating ADFun. ")
+    if( !silent ) cat("Re-creating ADFun. ")
     if( length(robust_schedule) > 1 ) {
         obj<- RTMB::MakeADFun(
             func,
             fitpar,
             map = c(map, robust_map),
             random = random,
-            silent = !inner.trace
+            silent = TRUE
         )
     } else {}
     
-    if( outer.trace ) cat("Computing sdreport.\n")
+    if( !silent ) cat("Computing sdreport.\n")
     sdr<- RTMB::sdreport(
         obj,
         opt$par,

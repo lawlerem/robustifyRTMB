@@ -13,8 +13,7 @@ robustly_optimize(
   robust_schedule = 0,
   map = list(),
   bandwidth = 1e-06,
-  inner.trace = FALSE,
-  outer.trace = TRUE
+  silent = TRUE
 )
 }
 \arguments{
