@@ -14,12 +14,16 @@ robust_weight(x, robustness, robust_function = "id")
 
 \item{robustness}{A positive number. Larger numbers downweight components more.}
 
-\item{robust_function}{Either "id" for the identity (non-robust), "ll" for log-logistic, or "ssh" for smooth semi-huber.}
+\item{robust_function}{Either "id" for the identity (non-robust), "ll" for log-logistic, or
+"ssh" for smooth semi-huber. "ssh" is currently an experimental function
+and may quietly not work as intended.}
 }
 \value{
-The robustified log-likelihood values.
+\if{html}{\out{<div class="sourceCode">}}\preformatted{The robustified log-likelihood values.
+}\if{html}{\out{</div>}}
 
-A vector of robust weights.
+\if{html}{\out{<div class="sourceCode">}}\preformatted{A vector of robust weights.
+}\if{html}{\out{</div>}}
 }
 \description{
 Compute the robustified likelihood value

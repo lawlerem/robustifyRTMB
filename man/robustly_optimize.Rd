@@ -23,7 +23,7 @@ robustly_optimize(
 
 \item{random}{See RTMB::MakeADFun}
 
-\item{smooth}{A character naming the random effects that should be smoothed}
+\item{smooth}{A character naming the random effects that should be smoothed.}
 
 \item{nodes}{A matrix giving the locations of the spline nodes}
 
@@ -33,12 +33,21 @@ robustly_optimize(
 
 \item{bandwidth}{The bandwidth to use when smoothing the spline between iterations}
 
-\item{inner.trace}{Should the inner tracing (nlminb) be printed?}
-
-\item{outer.trace}{Should the outer tracing (iterative optimization) be printed?}
+\item{silent}{Should the optimization tracing be suppressed?}
 }
 \value{
-A list containing the MakeADFun, the nlminb, and sdreport outputs
+\if{html}{\out{<div class="sourceCode">}}\preformatted{A list containing:
+}\if{html}{\out{</div>}}
+\itemize{
+\item par
+The estimated parameter list
+\item obj
+The objective function from RTMB::MakeADFun
+\item opt
+The optimizer output from nlminb
+\item sdr
+The standard errors from RTMB::sdreport
+}
 }
 \description{
 Fit a random effects model with a robustified likelihood
