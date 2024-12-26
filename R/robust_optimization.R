@@ -141,12 +141,15 @@ robustly_optimize<- function(
                 random = random,
                 silent = TRUE
             )
-        opt<- suppressWarnings(with(obj, stats::nlminb(par, fn, gr)))
+        opt<- obj |>
+            with(stats::nlminb(par, fn, gr)) |>
+            suppressWarnings() |>
+            try(silent = TRUE)
+        if( opt |> inherits("try-error") ) break
         fitpar<- obj$env$parList()
 
         # 3.) Re-estimate spline and parameters
         if( !silent ) cat(paste0("Re-estimating all parameters."))
-        if( !silent & (i == length(robust_schedule)) ) cat("\n")
         obj<- f |>
             RTMB::MakeADFun(
                 fitpar,
@@ -154,32 +157,47 @@ robustly_optimize<- function(
                 random = random,
                 silent = TRUE
             )
-        opt<- suppressWarnings(with(obj, stats::nlminb(par, fn, gr)))
+        opt<- obj |>
+            with(stats::nlminb(par, fn, gr)) |>
+            suppressWarnings() |>
+            try(silent = TRUE)
+        if( opt |> inherits("try-error") ) break
         fitpar<- obj$env$parList()
 
         parameter_tracing[[i]]$parameters<- fitpar
         parameter_tracing[[i]]$opt<- opt
     }
+    if( !silent ) cat("\n")
 
     convergences<- c |> 
-        do.call(parameter_tracing |> lapply(function(x) x$opt$convergence))
-    if( (convergences == 0) |> any() ) {
-        last_converged<- (convergences == 0) |> which() |> max()
-    } else {
+        do.call(
+            parameter_tracing |> 
+                lapply(
+                    function(x) {
+                        if( x$opt |> identical(NA) ) NA else x$opt$convergence
+                    }
+                )
+        )
+    
+    if( (convergences == 0) |> any(na.rm = TRUE) ) {
+        run_idx<- (convergences == 0) |> which() |> max()
+    } else if( (convergences == 1) |> any(na.rm = TRUE) ) {
         warning("Robust optimization did not converge.")
-        last_converged<- convergences |> length()
+        run_idx<- !is.na(convergences) |> which() |> max()
+    } else {
+        stop("All optimizations ran into an unrecoverable error.")
     }
-    if( !silent & (last_converged != length(convergences)) ) {
+    if( !silent & (run_idx != length(convergences)) ) {
         cat(
             paste0(
-                "Target robustness did not successfully converge. Using robustness ",
-                parameter_tracing[[last_converged]]$robustness,
-                " instead.\n"
+                "Using robustness ",
+                parameter_tracing[[run_idx]]$robustness,
+                ".\n"
             )
         )
-    } else {}
-    fitpar<- parameter_tracing[[last_converged]]$parameters
-    opt<- parameter_tracing[[last_converged]]$opt
+    }
+    fitpar<- parameter_tracing[[run_idx]]$parameters
+    opt<- parameter_tracing[[run_idx]]$opt
 
     if( !silent ) cat("Re-creating ADFun. ")
     if( length(robust_schedule) > 1 ) {
@@ -190,7 +208,7 @@ robustly_optimize<- function(
                 random = random,
                 silent = TRUE
             )
-    } else {}
+    }
     
     if( !silent ) cat("Computing sdreport.\n")
     sdr<- obj |> 
