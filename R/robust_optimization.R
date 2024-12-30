@@ -183,7 +183,7 @@ robustly_optimize<- function(
         run_idx<- (convergences == 0) |> which() |> max()
     } else if( (convergences == 1) |> any(na.rm = TRUE) ) {
         warning("Robust optimization did not converge.")
-        run_idx<- !is.na(convergences) |> which() |> max()
+        run_idx<- (!is.na(convergences)) |> which() |> max()
     } else {
         stop("All optimizations ran into an unrecoverable error.")
     }
